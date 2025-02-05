@@ -3,7 +3,7 @@ import axios from 'axios';
 
 function NavBar({ onLogin, onLogout, isLoggedIn }) {
   return (
-    <nav className="position-sticky w-full h-fit flex justify-around z-10 p-4 bg-amber-300 shadow-2xl border-bottom">
+    <nav className="position-sticky w-full h-fit z-10 p-4 bg-amber-300 shadow-2xl border-bottom">
       <h1 className="text-2xl font-semibold">My Notes</h1>
       {isLoggedIn ? (
         <button onClick={onLogout} className="ml-auto bg-red-500 px-3 py-1 rounded hover:scale-105">Logout</button>
@@ -19,20 +19,22 @@ function Sidebar() {
     <aside className="w-1/5 h-full p-4 bg-amber-100">
       <h2>Categories</h2>
     </aside>
-  )
+  );
 }
 
-function Main() {
+function Main({ isLoggedIn }) {
   const [notes, setNotes] = useState([]);
   const [note, setNote] = useState('');
   const [editIndex, setEditIndex] = useState(null);
   const [editNote, setEditNote] = useState('');
 
   useEffect(() => {
-    axios.get('/api/notes')
-      .then(response => setNotes(response.data))
-      .catch(error => console.error('Error loading notes:', error));
-  }, []);
+    if (isLoggedIn) {
+      axios.get('/api/notes')
+        .then(response => setNotes(response.data))
+        .catch(error => console.error('Error loading notes:', error));
+    }
+  }, [isLoggedIn]);
 
   const addNote = () => {
     if (note.trim()) {
@@ -46,7 +48,7 @@ function Main() {
   };
 
   const deleteNote = (index) => {
-    const noteId = notes[index].id;
+    const noteId = notes[index]._id;
     axios.delete(`/api/notes/${noteId}`)
       .then(() => {
         setNotes(notes.filter((_, i) => i !== index));
@@ -60,7 +62,7 @@ function Main() {
   };
 
   const saveEdit = () => {
-    const noteId = notes[editIndex].id;
+    const noteId = notes[editIndex]._id;
     axios.put(`/api/notes/${noteId}`, { note: editNote })
       .then(response => {
         const updatedNotes = [...notes];
@@ -115,16 +117,138 @@ function Main() {
   );
 }
 
-function App() {
+function Login({ onLogin }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    axios.post('/api/auth/login', { email, password })
+      .then(response => {
+        onLogin();
+      })
+      .catch(error => console.error('Error logging in:', error));
+  };
+
   return (
-    <div className="w-full h-screen flex flex-col">
-      <NavBar />
-      <div className="w-full h-full flex">
-        <Sidebar />
-        <Main />
+    <form onSubmit={handleSubmit} className="w-full max-w-sm mx-auto mt-10">
+      <h2 className="text-2xl mb-4">Login</h2>
+      <div className="mb-4">
+        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">Email</label>
+        <input
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          id="email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
       </div>
-    </div>
-  )
+      <div className="mb-6">
+        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">Password</label>
+        <input
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
+          id="password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <button
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          type="submit"
+        >
+          Login
+        </button>
+      </div>
+    </form>
+  );
 }
 
-export default App
+function SignUp({ onSignUp }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    axios.post('/api/auth/signup', { email, password })
+      .then(response => {
+        onSignUp();
+      })
+      .catch(error => console.error('Error signing up:', error));
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="w-full max-w-sm mx-auto mt-10">
+      <h2 className="text-2xl mb-4">Sign Up</h2>
+      <div className="mb-4">
+        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">Email</label>
+        <input
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          id="email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+      </div>
+      <div className="mb-6">
+        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">Password</label>
+        <input
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
+          id="password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <button
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          type="submit"
+        >
+          Sign Up
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
+
+  const handleLogin = () => {
+    setIsLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+  };
+
+  const handleSignUp = () => {
+    setIsSignUp(false);
+    setIsLoggedIn(true);
+  };
+
+  return (
+    <div className="w-full h-screen flex flex-col">
+      <NavBar onLogin={() => setIsSignUp(true)} onLogout={handleLogout} isLoggedIn={isLoggedIn} />
+      <div className="w-full h-full flex">
+        <Sidebar />
+        {isLoggedIn ? (
+          <Main isLoggedIn={isLoggedIn} />
+        ) : isSignUp ? (
+          <SignUp onSignUp={handleSignUp} />
+        ) : (
+          <Login onLogin={handleLogin} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default App;
